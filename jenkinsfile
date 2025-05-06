@@ -1,0 +1,17 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/mahbagci/Kubernetes_Projekt.git'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh './deploy.sh'
+            }
+        }
+    }
+}
