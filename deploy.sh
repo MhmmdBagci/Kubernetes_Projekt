@@ -1,47 +1,36 @@
 #!/bin/bash
 set -e
 
-# Docker Hub Login mit Umgebungsvariablen aus Jenkins
-echo "🔐 Versuche Docker Login mit Jenkins Credentials..."
-if ! echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin; then
-    echo "⚠️ Login mit Jenkins Credentials fehlgeschlagen. Versuche Fallback-Login..."
-    
-    # Fallback: manuell gesetzte Zugangsdaten (nur für Tests!)
-    FALLBACK_USER="mahbagci"
-    FALLBACK_PASS="Pjkez6&qc"  # ❗ Bitte nach Test wieder löschen
-
-    echo "$FALLBACK_PASS" | docker login -u "$FALLBACK_USER" --password-stdin
-fi
-
-echo "✅ Docker Login erfolgreich."
-
-# Maven Build
-echo "🔨 Baue Backend..."
+# 1. Maven Build (Spring Boot Backend)
+echo "🔨 Baue Backend mit Maven..."
 cd backend
 ./mvnw clean package || mvn clean package
 cd ..
 
-# Docker Compose Build
-echo "🐳 Starte Build mit docker compose..."
-docker compose down
-docker compose build
-docker compose up -d
+# 2. Docker-Images bauen
+echo "🐳 Baue Docker-Images..."
+docker build -t mahbagci/todo-backend:latest ./backend
+docker build -t mahbagci/todo-frontend:latest ./frontend
 
-# Taggen
+# 3. Docker-Images taggen
+echo "🏷️  Tagge Docker-Images..."
 docker tag mahbagci/todo-backend:latest mahbagci/todo-backend:1.0.0
 docker tag mahbagci/todo-frontend:latest mahbagci/todo-frontend:1.0.0
 
-# Push
+# 4. Docker-Images pushen
+echo "⬆️  Pushe Docker-Images zu Docker Hub..."
 docker push mahbagci/todo-backend:latest
 docker push mahbagci/todo-backend:1.0.0
 docker push mahbagci/todo-frontend:latest
 docker push mahbagci/todo-frontend:1.0.0
 
-# Kubernetes Deployments
+# 5. Kubernetes Manifeste anwenden
+echo "☸️  Wende Kubernetes-Konfigurationen an..."
 kubectl apply -f backend/backend.yaml
 kubectl apply -f frontend/frontend.yaml
 
-# Kubernetes Rolling Update
+# 6. Kubernetes Rolling Update (neue Images setzen)
+echo "🔄 Aktualisiere Kubernetes-Deployments mit neuen Images..."
 kubectl set image deployment/backend-deployment backend=mahbagci/todo-backend:1.0.0
 kubectl set image deployment/frontend-deployment frontend=mahbagci/todo-frontend:1.0.0
 
