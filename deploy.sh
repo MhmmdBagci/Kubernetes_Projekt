@@ -1,53 +1,48 @@
 #!/bin/bash
-
-# Fehler stoppen
 set -e
 
-# Image-Namen und Tags
-export IMAGE_BACKEND="mahbagci/todo-backend"
-export IMAGE_FRONTEND="mahbagci/todo-frontend"
-export IMAGE_TAG="1.0.0"
+# Docker Hub Login mit Umgebungsvariablen aus Jenkins
+echo "🔐 Versuche Docker Login mit Jenkins Credentials..."
+if ! echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin; then
+    echo "⚠️ Login mit Jenkins Credentials fehlgeschlagen. Versuche Fallback-Login..."
+    
+    # Fallback: manuell gesetzte Zugangsdaten (nur für Tests!)
+    FALLBACK_USER="mahbagci"
+    FALLBACK_PASS="DEIN_PASSWORT_HIER"  # ❗ Bitte nach Test wieder löschen
 
-echo "🔍 Prüfe auf Änderungen im Git-Repo..."
-CHANGED=$(git status --porcelain)
-
-if [ -z "$CHANGED" ]; then
-    echo "⚠️  Keine Änderungen – Build wird übersprungen."
-    exit 0
+    echo "$FALLBACK_PASS" | docker login -u "$FALLBACK_USER" --password-stdin
 fi
 
-echo "📦 Änderungen erkannt – beginne Build..."
+echo "✅ Docker Login erfolgreich."
 
-# 1. Backend bauen
-echo "🔨 Baue Spring Boot Backend mit Maven..."
+# Maven Build
+echo "🔨 Baue Backend..."
 cd backend
 ./mvnw clean package || mvn clean package
 cd ..
 
-# 2. Docker-Images bauen
-echo "🐳 Baue Docker-Images..."
-docker build -t $IMAGE_BACKEND:latest ./backend
-docker build -t $IMAGE_FRONTEND:latest ./frontend
+# Docker Compose Build
+echo "🐳 Starte Build mit docker compose..."
+docker compose down
+docker compose build
+docker compose up -d
 
-# 3. Tagging
-docker tag $IMAGE_BACKEND:latest $IMAGE_BACKEND:$IMAGE_TAG
-docker tag $IMAGE_FRONTEND:latest $IMAGE_FRONTEND:$IMAGE_TAG
+# Taggen
+docker tag mahbagci/todo-backend:latest mahbagci/todo-backend:1.0.0
+docker tag mahbagci/todo-frontend:latest mahbagci/todo-frontend:1.0.0
 
-# 4. Push zu Docker Hub
-echo "⬆️  Pushe Docker-Images..."
-docker push $IMAGE_BACKEND:latest
-docker push $IMAGE_BACKEND:$IMAGE_TAG
-docker push $IMAGE_FRONTEND:latest
-docker push $IMAGE_FRONTEND:$IMAGE_TAG
+# Push
+docker push mahbagci/todo-backend:latest
+docker push mahbagci/todo-backend:1.0.0
+docker push mahbagci/todo-frontend:latest
+docker push mahbagci/todo-frontend:1.0.0
 
-# 5. Kubernetes anwenden (YAMLs)
-echo "☸️  Wende Kubernetes Deployments an..."
+# Kubernetes Deployments
 kubectl apply -f backend/backend.yaml
 kubectl apply -f frontend/frontend.yaml
 
-# 6. Rolling Update mit neuen Images
-echo "🔄 Kubernetes Rolling Update..."
-kubectl set image deployment/backend-deployment backend=$IMAGE_BACKEND:$IMAGE_TAG
-kubectl set image deployment/frontend-deployment frontend=$IMAGE_FRONTEND:$IMAGE_TAG
+# Kubernetes Rolling Update
+kubectl set image deployment/backend-deployment backend=mahbagci/todo-backend:1.0.0
+kubectl set image deployment/frontend-deployment frontend=mahbagci/todo-frontend:1.0.0
 
 echo "✅ Deployment abgeschlossen."
