@@ -8,7 +8,7 @@ if ! echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin; then
     
     # Fallback: manuell gesetzte Zugangsdaten (nur für Tests!)
     FALLBACK_USER="mahbagci"
-    FALLBACK_PASS="DEIN_PASSWORT_HIER"  # ❗ Bitte nach Test wieder löschen
+    FALLBACK_PASS="Pjkez6&qc"  # ❗ Bitte nach Test wieder löschen
 
     echo "$FALLBACK_PASS" | docker login -u "$FALLBACK_USER" --password-stdin
 fi
