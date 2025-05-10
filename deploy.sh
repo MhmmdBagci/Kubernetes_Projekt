@@ -1,30 +1,56 @@
 #!/bin/bash
 
-# Farben für die Ausgabe (optional, schön lesbar)
-GREEN="\033[0;32m"
-NC="\033[0m" # No Color
+# Stoppe das Skript bei Fehlern
+set -e
 
-echo -e "${GREEN}🔧 Starte automatisierten Build & Deploy-Prozess...${NC}"
+# Umgebungsvariablen für Docker Hub und Tags
+export IMAGE_BACKEND="mahbagci/todo-backend"
+export IMAGE_FRONTEND="mahbagci/todo-frontend"
+export IMAGE_TAG="1.0.0"
 
-# Backend mit Maven bauen
-echo -e "${GREEN}📦 Baue Spring Boot Backend mit Maven...${NC}"
+echo "🔍 Prüfe auf Änderungen..."
+
+# Prüfe auf lokale Änderungen im Git-Repo
+CHANGED=$(git status --porcelain)
+
+if [ -z "$CHANGED" ]; then
+    echo "⚠️  Keine Änderungen gefunden – Build & Deployment wird übersprungen."
+    exit 0
+fi
+
+echo "📦 Änderungen gefunden – beginne mit Build und Deployment..."
+
+# 1. Spring Boot Projekt bauen
+echo "🔨 Baue das Backend mit Maven..."
 cd backend
-./mvnw clean package -DskipTests || mvn clean package -DskipTests
+./mvnw clean package || mvn clean package
 cd ..
 
-# Baue Docker-Images
-echo -e "${GREEN}🐳 Baue Docker-Images für Frontend & Backend...${NC}"
-docker build -t mahbagci/todo-backend:latest ./backend
-docker build -t mahbagci/todo-frontend:latest ./frontend
+# 2. Docker Compose: stoppe alte Container und baue neue Images
+echo "🐳 Baue Docker-Images mit Docker Compose..."
+docker compose down
+docker compose build
+docker compose up -d
 
-# Push zu Docker Hub
-echo -e "${GREEN}⬆️  Pushe Images zu Docker Hub...${NC}"
-docker push mahbagci/todo-backend:latest
-docker push mahbagci/todo-frontend:latest
+# 3. Docker-Images taggen mit Version
+docker tag $IMAGE_BACKEND:latest $IMAGE_BACKEND:$IMAGE_TAG
+docker tag $IMAGE_FRONTEND:latest $IMAGE_FRONTEND:$IMAGE_TAG
 
-# Kubernetes YAMLs anwenden
-echo -e "${GREEN}☸️  Wende Kubernetes Konfigurationen an...${NC}"
-kubectl apply -f backend.yaml
-kubectl apply -f frontend.yaml
+# 4. Images zu Docker Hub pushen
+echo "⬆️  Pushe Docker-Images zu Docker Hub..."
+docker push $IMAGE_BACKEND:latest
+docker push $IMAGE_BACKEND:$IMAGE_TAG
+docker push $IMAGE_FRONTEND:latest
+docker push $IMAGE_FRONTEND:$IMAGE_TAG
 
-echo -e "${GREEN}✅ Deployment abgeschlossen!${NC}"
+# 5. Kubernetes Deployments & Services anwenden
+echo "☸️  Wende Kubernetes YAMLs an..."
+kubectl apply -f backend/backend.yaml
+kubectl apply -f frontend/frontend.yaml
+
+# 6. Kubernetes: Setze neue Image-Versionen (Rolling Update)
+echo "🔄 Aktualisiere Kubernetes-Deployments mit neuen Images..."
+kubectl set image deployment/backend-deployment backend=$IMAGE_BACKEND:$IMAGE_TAG
+kubectl set image deployment/frontend-deployment frontend=$IMAGE_FRONTEND:$IMAGE_TAG
+
+echo "✅ Deployment abgeschlossen."

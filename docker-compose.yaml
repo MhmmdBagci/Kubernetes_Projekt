@@ -3,11 +3,11 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8080:8080"
+      - "8087:8080"
 
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "8086:80"
     depends_on:
       - backend

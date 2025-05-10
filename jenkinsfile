@@ -1,17 +1,39 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_BACKEND = 'mahbagci/todo-backend'
+        IMAGE_FRONTEND = 'mahbagci/todo-frontend'
+        IMAGE_TAG = '1.0.0'
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Arbeitsverzeichnis bereinigen') {
             steps {
-                git 'https://github.com/mahbagci/Kubernetes_Projekt.git'
+                cleanWs()
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Code aus GitHub holen') {
             steps {
+                checkout scm
+            }
+        }
+
+        stage('Build und Deployment') {
+            steps {
+                sh 'chmod +x ./deploy.sh'
                 sh './deploy.sh'
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Deployment war erfolgreich!'
+        }
+        failure {
+            echo '❌ Deployment fehlgeschlagen.'
         }
     }
 }
