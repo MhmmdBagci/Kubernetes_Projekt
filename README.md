@@ -1,6 +1,7 @@
 # 📦 Kubernetes ToDo-Projekt
 
-Dieses Projekt wurde im Rahmen der Weiterbildung zum **DevOps Engineer** bei der **Borngraben IT Dienstleistung Services GmbH** umgesetzt.
+Dieses Projekt wurde im Rahmen einer praxisnahen **Weiterbildungsaufgabe zum DevOps Engineer** entwickelt.  
+Es basiert auf einer simulierten Anforderung durch das fiktive Unternehmen **"Borngraben IT Dienstleistung Services GmbH"**.
 
 Ziel war es, ein einfaches Fullstack-Projekt mit Frontend und Backend zu:
 
