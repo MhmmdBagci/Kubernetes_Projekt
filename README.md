@@ -1,29 +1,146 @@
-Kubernetes ToDo-Projekt
+# 📦 Kubernetes ToDo-Projekt
 
-Dieses Projekt wurde im Rahmen der Weiterbildung zum DevOps Engineer bei der Borngraben IT Dienstleistung Services GmbH umgesetzt. Ziel war es, ein einfaches Fullstack-Projekt mit Frontend und Backend zu dockerisieren, lokal mit Docker Compose zu betreiben und anschließend in einem Kubernetes-Cluster bereitzustellen. Zusätzlich wurde eine CI/CD-Pipeline mit Jenkins integriert, die das gesamte Deployment automatisiert.
+Dieses Projekt wurde im Rahmen der Weiterbildung zum **DevOps Engineer** bei der **Borngraben IT Dienstleistung Services GmbH** umgesetzt.
 
-Das Frontend besteht aus einer To-Do-Liste in Vanilla JavaScript und wird mit Nginx ausgeliefert. Das Backend ist eine Spring Boot-Anwendung, die eingetragene Aufgaben protokolliert. Beide Komponenten wurden jeweils mit einem eigenen Dockerfile versehen. Für lokale Tests wurde eine docker-compose.yml erstellt, in der das Frontend auf Port 8086 und das Backend auf Port 8087 läuft, um mögliche Portkonflikte (z. B. bei parallelen Jenkins-Builds) zu vermeiden.
+Ziel war es, ein einfaches Fullstack-Projekt mit Frontend und Backend zu:
 
-Für den produktiven Betrieb im Kubernetes-Cluster wurden zwei YAML-Dateien (frontend.yaml und backend.yaml) erstellt, die jeweils sowohl das Deployment als auch den Service definieren. Die Docker-Images wurden in die öffentliche Docker-Hub-Registry unter dem Benutzernamen mahbagci gepusht. Somit können sie vom Kubernetes-Cluster direkt verwendet werden.
+- 🐳 **Dockerisieren**
+- 🧪 **Lokal mit Docker Compose testen**
+- ☸️ **In einem Kubernetes-Cluster bereitstellen**
+- 🔄 **Per Jenkins CI/CD automatisiert deployen**
 
-Die Datei deploy.sh automatisiert den gesamten Ablauf: Wenn Änderungen im Repository erkannt werden, wird das Backend mit Maven gebaut, die Docker-Images neu erstellt und zu Docker Hub gepusht. Anschließend erfolgt ein Rolling Update im Kubernetes-Cluster mit kubectl set image, sodass die Anwendung nahtlos aktualisiert wird.
+---
 
-Für die CI/CD-Pipeline wurde ein Jenkinsfile erstellt, das alle gängigen Schritte umfasst: Bereinigung des Arbeitsverzeichnisses (cleanWs()), Auschecken des Codes und Ausführen des deploy.sh-Skripts. Damit kann bei jedem Push ins GitHub-Repository automatisch ein neuer Build ausgelöst und das Projekt ausgerollt werden. Optional kann ein Webhook in GitHub eingerichtet werden oder Polling aktiviert werden.
+## 🖥️ Projektüberblick
 
-Das Repository enthält alle relevanten Dateien:
+| Komponente | Beschreibung |
+|------------|--------------|
+| 🎨 **Frontend** | To-Do-Liste in Vanilla JavaScript, ausgeliefert über Nginx |
+| 🛠️ **Backend**  | Spring Boot-Anwendung (Java + Maven), protokolliert Aufgaben |
+| ⚙️ **CI/CD**    | Jenkins-Pipeline automatisiert Build & Deployment |
+| ☸️ **Kubernetes** | Deployments + Services für beide Komponenten |
 
-backend/ mit dem Spring Boot Projekt
+---
 
-frontend/ mit HTML, CSS und JS
+## 📁 Projektstruktur
 
-docker-compose.yml für lokale Tests
+```
+.
+├── backend/             # Spring Boot Projekt (inkl. Dockerfile + backend.yaml)
+├── frontend/            # HTML, CSS, JS (inkl. Dockerfile + frontend.yaml)
+├── docker-compose.yml   # Lokales Setup mit individuellen Ports
+├── deploy.sh            # Automatisiertes Build- & Deploy-Skript
+├── Jenkinsfile          # Jenkins-Pipeline Definition
+└── README.md            # Projektdokumentation (diese Datei)
+```
 
-backend.yaml und frontend.yaml für Kubernetes
+---
 
-deploy.sh zur Automatisierung
+## 🧪 Lokaler Test mit Docker Compose
 
-Jenkinsfile für CI/CD
+Das Projekt kann lokal getestet werden – mit angepassten Ports zur Vermeidung von Konflikten (z. B. bei parallelen Jenkins-Builds):
 
-README.md zur Projektdokumentation
+- 🔗 **Frontend**: http://localhost:8086  
+- 🔗 **Backend**: http://localhost:8087
 
-Das Projekt erfüllt alle Anforderungen: vollständige Dockerisierung, funktionierende Kubernetes-Deployments, automatisiertes Rollout per Shell-Skript und CI/CD-Integration in Jenkins. Damit simuliert es eine moderne DevOps-Pipeline vom lokalen Test bis zur produktionsreifen Bereitstellung.
+```bash
+docker-compose up --build
+```
+
+---
+
+## ☸️ Kubernetes Setup
+
+Für den produktiven Betrieb im Kubernetes-Cluster wurden zwei YAML-Dateien erstellt:
+
+- `frontend.yaml`  
+- `backend.yaml`
+
+Diese enthalten jeweils:
+
+- ein **Deployment**
+- einen **Service**
+
+Da keine externe Registry verwendet wird, nutzen die Deployments lokal gebaute Docker-Images:
+
+```yaml
+image: todo-backend:1.0.0
+imagePullPolicy: Never
+```
+
+Dies erlaubt Kubernetes, auf die lokalen Docker-Images zuzugreifen – vorausgesetzt, das Cluster läuft lokal (z. B. via Docker Desktop).
+
+---
+
+## 🔧 Automatisiertes Deployment mit `deploy.sh`
+
+Die Datei `deploy.sh` übernimmt:
+
+1. Maven-Build des Backends (`./mvnw clean package`)
+2. Docker-Build für Backend und Frontend
+3. Anwendung der Kubernetes-Manifeste (`kubectl apply`)
+4. Rolling Update mit neuen Images (`kubectl set image`)
+
+Es erkennt automatisch Änderungen und aktualisiert das Cluster bei Bedarf.
+
+---
+
+## 🔁 CI/CD mit Jenkins
+
+Die CI/CD-Pipeline wird über ein `Jenkinsfile` definiert.  
+Dieses enthält alle Schritte:
+
+- 🧹 `cleanWs()` – Bereinigung des Jenkins-Arbeitsverzeichnisses
+- 🔄 GitHub Checkout (automatisch per Webhook oder Polling)
+- ⚙️ Maven-Build + Docker-Build
+- ☸️ Kubernetes Deployment über `kubectl`
+
+---
+
+## 📦 Inhalte des Repositories
+
+✅ **Backend**  
+→ Spring Boot + Maven + Dockerfile + backend.yaml
+
+✅ **Frontend**  
+→ HTML, CSS, JavaScript + Dockerfile + frontend.yaml
+
+✅ **docker-compose.yml**  
+→ Für lokale Tests (angepasste Ports 8086/8087)
+
+✅ **deploy.sh**  
+→ Shell-Skript zur Build- & Kubernetes-Automatisierung
+
+✅ **Jenkinsfile**  
+→ Definiert die CI/CD-Pipeline
+
+✅ **README.md**  
+→ Projektdokumentation
+
+---
+
+## ✅ Zusammenfassung
+
+| Ziel                          | Erreicht |
+|-------------------------------|----------|
+| Dockerisierung                | ✅        |
+| Lokales Testing mit Compose   | ✅        |
+| Kubernetes Deployments        | ✅        |
+| Automatisiertes Deployment    | ✅        |
+| CI/CD mit Jenkins             | ✅        |
+
+---
+
+## 📝 Hinweise
+
+- Das Projekt simuliert eine vollständige **DevOps-Pipeline**
+- Vom lokalen Test bis zur Kubernetes-Produktion
+- Ideal als Lernprojekt oder Vorlage für moderne Microservice-Deployments
+
+---
+
+## 👤 Autor
+
+**Muhammed Bagci**  
+Weiterbildung zum DevOps Engineer  
+Alle Dateien stehen zu Lern- und Testzwecken zur Verfügung.
