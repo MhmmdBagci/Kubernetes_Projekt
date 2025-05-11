@@ -2,44 +2,57 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_BACKEND = 'mahbagci/todo-backend'
-        IMAGE_FRONTEND = 'mahbagci/todo-frontend'
-        IMAGE_TAG = '1.0.0'
+        IMAGE_BACKEND = 'todo-backend:1.0.0'
+        IMAGE_FRONTEND = 'todo-frontend:1.0.0'
     }
 
     stages {
-        stage('Arbeitsverzeichnis bereinigen') {
+        stage('Code holen') {
             steps {
-                cleanWs()
+                git 'https://github.com/MhmmdBagci/Kubernetes_Projekt.git'
             }
         }
 
-        stage('Code aus GitHub holen') {
+        stage('Build Backend mit Maven') {
             steps {
-                checkout scm
+                sh 'cd backend && ./mvnw clean package || mvn clean package'
             }
         }
 
-        stage('Build und Deployment') {
+        stage('Docker Images bauen') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    // Sicheres Docker Login
-                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                sh 'docker build -t todo-backend:1.0.0 ./backend'
+                sh 'docker build -t todo-frontend:1.0.0 ./frontend'
+            }
+        }
 
-                    // Skript ausführbar machen & ausführen
-                    sh 'chmod +x ./deploy.sh'
-                    sh './deploy.sh'
-                }
+        stage('Kubernetes Apply') {
+            steps {
+                sh 'kubectl apply -f backend/backend.yaml'
+                sh 'kubectl apply -f frontend/frontend.yaml'
+
+                sh 'kubectl set image deployment/backend-deployment backend=todo-backend:1.0.0'
+                sh 'kubectl set image deployment/frontend-deployment frontend=todo-frontend:1.0.0'
+            }
+        }
+
+        stage('Abschluss') {
+            steps {
+                echo '✅ Lokales Deployment abgeschlossen (ohne Docker Hub)'
             }
         }
     }
 
     post {
+        always {
+            echo '🧹 Bereinige Workspace...'
+            sh 'rm -rf ./*'
+        }
         success {
-            echo '✅ Deployment war erfolgreich!'
+            echo '✅ Pipeline erfolgreich abgeschlossen.'
         }
         failure {
-            echo '❌ Deployment fehlgeschlagen.'
+            echo '❌ Pipeline fehlgeschlagen.'
         }
     }
 }
